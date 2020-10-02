@@ -1,0 +1,21 @@
+server:
+  name: elasticclient_test
+  author: airing
+  version: 1.0
+  port:
+  netTimeOutMs: 5000
+
+log:
+  level: debug
+  path: ../log/
+  maxSize: 100   #mb
+  maxBackups: 20 #file count
+  maxAge: 30     #days
+  compress: true
+
+#elastic client配置
+elastic_test:
+  addr: http://127.0.0.1:9200  #地址
+  userName: #用户名
+  password: #密码
+  timeOutMs: 5000
