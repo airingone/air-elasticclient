@@ -11,9 +11,9 @@ import (
 
 //es client 测试
 func TestMysqlClient(t *testing.T) {
-	config.InitConfig()                         //配置文件初始化
+	config.InitConfig()                     //配置文件初始化
 	log.InitLog(config.GetLogConfig("log")) //日志初始化
-	InitEsClient("elastic_test")    //初始化es client
+	InitEsClient("elastic_test")            //初始化es client
 	defer CloseEsClient()
 
 	index := "index04"
@@ -50,6 +50,17 @@ func TestMysqlClient(t *testing.T) {
 	ret, err := EsDeleteDoc(context.Background(), "elastic_test", index, "1")
 	log.Error("EsDeleteDoc: ret: %+v, err: %+v", ret, err)
 
+	//or
+	//write doc
+	esConfig := config.GetEsConfig("elastic_test")
+	cli, err := NewEsClient(esConfig.Addr, esConfig.UserName, esConfig.Password, esConfig.TimeOutMs)
+	if err != nil {
+		log.Error("new es client err, err: %+v", err)
+		return
+	}
+	id2, err := cli.InsertDoc(context.Background(), index, "1", data)
+	log.Error("EsInsertDoc: id2: %s, err: %+v", id2, err)
+	cli.Close()
 
 	//kinaba dev: GET index02/_mapping
 	//GET index03/_doc/1

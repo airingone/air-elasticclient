@@ -32,5 +32,17 @@ func main() {
     //读doc
     data1, err := elasticclient.EsGetDoc(context.Background(), "elastic_test", index, "1")
     log.Error("EsGetDoc: data: %s, err: %+v", data1, err)
+
+    //or
+    //write doc
+    esConfig := config.GetEsConfig("elastic_test")
+    cli, err := NewEsClient(esConfig.Addr, esConfig.UserName, esConfig.Password, esConfig.TimeOutMs)
+    if err != nil {
+        log.Error("new es client err, err: %+v", err)
+    return 
+    }
+    id2, err :=cli.InsertDoc(context.Background(), index, "1", data)
+    log.Error("EsInsertDoc: id2: %s, err: %+v", id2, err)
+    cli.Close()
 }
 ```

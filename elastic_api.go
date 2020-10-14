@@ -2,11 +2,66 @@ package air_elasticclient
 
 import (
 	"context"
+	"errors"
+	"github.com/airingone/config"
+	"github.com/airingone/log"
 	"github.com/olivere/elastic/v7"
+	"sync"
 )
 
 //es 操作接口封装，这里可以在使用的时候扩展常用的接口
 
+var AllEsClients map[string]*EsClient //全局es client
+var AllEsClientsRmu sync.RWMutex
+
+//初始化全局Es对象
+//configName: 配置名
+func InitEsClient(configName ...string) {
+	if AllEsClients == nil {
+		AllEsClients = make(map[string]*EsClient)
+	}
+
+	for _, name := range configName {
+		config := config.GetEsConfig(name)
+		cli, err := NewEsClient(config.Addr, config.UserName, config.Password, config.TimeOutMs)
+		if err != nil {
+			log.Error("[ES]: InitEsClient err, config name: %s, err: %+v", name, err)
+			continue
+		}
+
+		AllEsClientsRmu.Lock()
+		if oldCli, ok := AllEsClients[name]; ok { //如果已存在则先关闭
+			oldCli.Close()
+		}
+		AllEsClients[name] = cli
+		AllEsClientsRmu.Unlock()
+		log.Info("[ES]: InitEsClient succ, config name: %s", name)
+	}
+}
+
+//close all client
+func CloseEsClient() {
+	if AllEsClients == nil {
+		return
+	}
+	AllEsClientsRmu.RLock()
+	defer AllEsClientsRmu.RUnlock()
+	for _, cli := range AllEsClients {
+		cli.Close()
+	}
+}
+
+//get es client
+//configName: 配置名
+func GetEsClient(configName string) (*EsClient, error) {
+	AllEsClientsRmu.RLock()
+	defer AllEsClientsRmu.RUnlock()
+	if _, ok := AllEsClients[configName]; !ok {
+		return nil, errors.New("es client not exist")
+	}
+
+	return AllEsClients[configName], nil
+}
 
 //自定义mapping举例与说明
 //https://github.com/olivere/elastic/blob/3db0060fd8cb964465de85d8062407472d6b8f46/setup_test.go
@@ -33,11 +88,12 @@ const exampleMapping = `
 	}
 }
 `
+
 type exampleData struct {
-	Userid string `json:"userid"`
+	Userid   string `json:"userid"`
 	Username string `json:"username"`
 	Userdesc string `json:"userdesc"`
-	Usertel uint64 `json:"usertel"`
+	Usertel  uint64 `json:"usertel"`
 }
 
 /*const exampleMapping = `
@@ -162,5 +218,3 @@ func EsTermSearch(ctx context.Context, configName string, dataIndex string, term
 
 	return result, nil
 }
-
-
